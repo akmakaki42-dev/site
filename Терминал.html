@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Касса с добавлением товаров</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #eef2f3; display: flex; gap: 20px; padding: 20px; justify-content: center; flex-wrap: wrap; }
+        
+        /* Экран кассы (Терминал) */
+        .pos-machine { background: #333; width: 350px; border-radius: 15px; padding: 15px; color: white; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
+        .monitor { background: #111; border-radius: 10px; padding: 15px; min-height: 250px; font-family: monospace; border: 2px solid #444; margin-bottom: 15px; }
+        .monitor-line { display: flex; justify-content: space-between; color: #0f0; margin-bottom: 5px; font-size: 14px; }
+        .total-line { border-top: 1px solid #0f0; margin-top: 10px; padding-top: 10px; color: #0f0; font-size: 1.2em; font-weight: bold; }
+
+        /* Сетка товаров */
+        .catalog { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .product-btn { background: #444; border: none; color: white; padding: 10px; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; transition: 0.2s; }
+        .product-btn:hover { background: #555; }
+        .product-btn span { font-size: 20px; }
+
+        /* Админка */
+        .admin-panel { background: white; padding: 20px; border-radius: 15px; width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        h3 { margin-top: 0; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+        input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        
+        .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .btn-add { background: #8e44ad; color: white; width: 100%; padding: 10px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-pay { background: #27ae60; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-reset { background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        
+        .status-msg { text-align: center; font-weight: bold; margin-top: 10px; color: #f1c40f; }
+    </style>
+</head>
+<body>
+
+    <!-- ПАНЕЛЬ УПРАВЛЕНИЯ ТОВАРАМИ -->
+    <div class="admin-panel">
+        <h3>Добавить товар</h3>
+        <div class="input-group">
+            <label>Название</label>
+            <input type="text" id="p-name" placeholder="Напр: Пицца">
+        </div>
+        <div class="input-group">
+            <label>Эмодзи</label>
+            <input type="text" id="p-emoji" placeholder="Напр: 🍕">
+        </div>
+        <div class="input-group">
+            <label>Цена (₽)</label>
+            <input type="number" id="p-price" placeholder="0.00">
+        </div>
+        <button class="btn-add" onclick="createNewProduct()">➕ Добавить на витрину</button>
+
+        <h3 style="margin-top: 25px;">Управление оплатой</h3>
+        <div class="action-btns">
+            <button class="btn-pay" onclick="simulatePayment('success')">ОДОБРИТЬ</button>
+            <button class="btn-pay" style="background:#c0392b" onclick="simulatePayment('fail')">ОТКАЗ</button>
+        </div>
+        <button class="btn-reset" style="width:100%; margin-top:10px;" onclick="clearCart()">ОЧИСТИТЬ ЧЕК</button>
+    </div>
+
+    <!-- КАССОВЫЙ АППАРАТ -->
+    <div class="pos-machine">
+        <div class="monitor" id="monitor">
+            <div style="text-align: center; margin-bottom: 10px;">*** ЧЕК ОТКРЫТ ***</div>
+            <div id="cart-items"></div>
+            <div class="total-line">ИТОГО: <span id="total-val">0.00</span> ₽</div>
+            <div id="status" class="status-msg"></div>
+        </div>
+
+        <div class="catalog" id="catalog">
+            <!-- Сюда будут падать созданные товары -->
+        </div>
+    </div>
+
+    <script>
+        let total = 0;
+        const cartItems = document.getElementById('cart-items');
+        const totalVal = document.getElementById('total-val');
+        const status = document.getElementById('status');
+        const catalog = document.getElementById('catalog');
+
+        // Функция создания новой кнопки товара
+        function createNewProduct() {
+            const name = document.getElementById('p-name').value || "Товар";
+            const emoji = document.getElementById('p-emoji').value || "📦";
+            const price = parseFloat(document.getElementById('p-price').value) || 0;
+
+            const btn = document.createElement('button');
+            btn.className = 'product-btn';
+            btn.onclick = () => addToCart(name, price);
+            btn.innerHTML = `<span>${emoji}</span> ${name}<br><small>${price}₽</small>`;
+            
+            catalog.appendChild(btn);
+
+            // Очистка полей
+            document.getElementById('p-name').value = '';
+            document.getElementById('p-emoji').value = '';
+            document.getElementById('p-price').value = '';
+        }
+
+        function addToCart(name, price) {
+            const line = document.createElement('div');
+            line.className = 'monitor-line';
+            line.innerHTML = `<span>> ${name}</span> <span>${price.toFixed(2)}</span>`;
+            cartItems.appendChild(line);
+            
+            total += price;
+            totalVal.innerText = total.toFixed(2);
+            status.innerText = "";
+        }
+
+        function simulatePayment(result) {
+            if (total === 0) {
+                status.innerText = "ЧЕК ПУСТ!";
+                return;
+            }
+
+            status.style.color = "#f1c40f";
+            status.innerText = "СВЯЗЬ С БАНКОМ...";
+
+            setTimeout(() => {
+                if (result === 'success') {
+                    status.style.color = "#0f0";
+                    status.innerText = "ОПЛАЧЕНО УСПЕШНО";
+                    setTimeout(clearCart, 2000);
+                } else {
+                    status.style.color = "#e74c3c";
+                    status.innerText = "ОШИБКА: НЕДОСТАТОЧНО СРЕДСТВ";
+                }
+            }, 1500);
+        }
+
+        function clearCart() {
+            cartItems.innerHTML = "";
+            total = 0;
+            totalVal.innerText = "0.00";
+            status.innerText = "";
+        }
+
+        // Добавим пару товаров для старта
+        window.onload = () => {
+            document.getElementById('p-name').value = "Кола";
+            document.getElementById('p-emoji').value = "🥤";
+            document.getElementById('p-price').value = "99";
+            createNewProduct();
+        };
+    </script>
+</body>
+</html>
